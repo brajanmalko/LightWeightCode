@@ -46,7 +46,7 @@ int segnali[16];
 int medi[16];
 
 //CONFIGURATION OF PWM FOR ESP32
-const int freq = 5000;  // Frequenza PWM in Hz
+const int freq = 500;  // Frequenza PWM in Hz
 const int resolution = 8;  // Risoluzione a 8 bit (0-255)
 
 float lux[8];
@@ -307,7 +307,7 @@ void reazioneLinea(int n){
       movimentoDrittoSinistra(120, 120, 220); // Dritto Sinistra
       break;
     case 13:
-      movimentoDrittoSinistra(120, 120, 220); // Dritto Sinistra
+         // Dritto Sinistra
       break;
     case 14:
       movimento45Sinistra(230, 0, 230); // 45° Sinistra
@@ -348,7 +348,7 @@ void correzioneRotazione() {
 }
 
 void gestioneDribbler(bool linea){
-  ledcWrite(pwmChannelD, 255);
+  ledcWrite(end, 255);
 
   if(linea){
     if(cm[0] < 40){
@@ -405,7 +405,7 @@ void setup() {
     lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23, &Wire);  
   }
 
-  
+  /*
   xTaskCreate(
     readLightSensors,    // Funzione del task
     "ReadLightSensors",  // Nome del task
@@ -414,17 +414,18 @@ void setup() {
     0,                   // Priorità del task
     NULL                 // Handle del task
   );
+  */
   
 }
 
 void loop() {
-  vTaskDelay(pdMS_TO_TICKS(10));
+  //vTaskDelay(pdMS_TO_TICKS(10));
 
   for(int channel = 0; channel < 16; channel++){
         setMuxChannel(channel);
         
         if (channel < 4) {
-          triggerParallax();
+          //triggerParallax();
           delay(10); 
           cm[channel] = pulseWidth * 0.034 / 2;
           //Serial.print("Distance (cm) for channel ");
@@ -462,7 +463,7 @@ void loop() {
   //Serial.print("Angolo palla: ");
   //Serial.print(sensore);
   //Serial.print("--");
-  //Serial.println(angolo);
+  Serial.println(angolo);
 
   if(cm[3]){
     //gestioneDribbler(false);
@@ -484,6 +485,6 @@ void loop() {
   }
   */ 
   
-  movimento();
+  //movimento();
   
 }
