@@ -14,6 +14,11 @@ unsigned long task1_millis;
 unsigned long acquire_millis;
 unsigned long change_i2cport_millis;
 
+static unsigned long lastParallaxTrigger = 0;
+static int parallaxPhase = 0;
+static int currentParallaxChannel = 0;
+static unsigned long triggerStartTime = 0;
+
 //PARALLAX DISTANCE(CM)
 unsigned int cm[4]; //0 FRONT | 1 RIGHT | 2 LEFT | 3 BALL 
 //LIGHSENSOR VALUES 
@@ -46,12 +51,12 @@ int segnali[16];
 int medi[16];
 
 //CONFIGURATION OF PWM FOR ESP32
-const int freq = 500;  // Frequenza PWM in Hz
+const int freq = 2000;  // Frequenza PWM in Hz
 const int resolution = 8;  // Risoluzione a 8 bit (0-255)
 
 float lux[8];
 
-int minimo, sensore, valore,segnale,duty,on,off,periodo,v_rotazione, v_dritto, lightValue = 2000, count = 0;
+int minimo, sensore, valore,segnale,duty,on,off,periodo,v_rotazione, v_dritto, lightValue = 2000, count = 0, contCicli = 0;
 double duration, distancecm;
 float angolo, angleZ;
 bool cattura = false;
@@ -71,11 +76,15 @@ void tcaselect(uint8_t i) {
 
 void readLightSensors(void * parameter) {
   while (1) {
-    if (millis() - change_i2cport_millis > 15) {
+    if(millis() - task1_millis >1000){
+    task1_millis = millis();
+    }
+    if (millis() - change_i2cport_millis > 1) {
       change_i2cport_millis = millis();
 
-      if(count > 7)
+      if(count > 7){
         count = 0;
+      }
 
       tcaselect(count);
 
@@ -86,10 +95,9 @@ void readLightSensors(void * parameter) {
       if(count == 0){
         mpu6050.update();
         angleZ = mpu6050.getAngleZ();
-        //Serial.println(angleZ);
+        Serial.println(angleZ);
       }
-
-      vTaskDelay(pdMS_TO_TICKS(50));
+       count++;
     }
   }
 }
@@ -121,28 +129,35 @@ void IRAM_ATTR onFallingEdge() {
 
 void movimento(){
   
-  if (angolo == 0 || angolo == 337.5 || angolo == 22.5) {
-    movimentoDritto(230, 230, 0);
+  if (angolo == 0  ) {
+    //fermo(0,0,0);
+    movimentoDritto(180, 180, 0);
   }
 
-  if (angolo == 292.5 || angolo == 315) {
-    movimentoDrittoDestra(120, 120, 220);
+  
+  if (angolo == 337.5) {
+    //fermo(0,0,0);
+    movimentoDrittoDestra(100, 100, 160);
   }
 
-  if (angolo == 270 || angolo == 157.5) {
-    movimento45Destra(0, 230, 230);
+  if (angolo == 292.5 || angolo == 270 || angolo == 157.5 || angolo == 315) {
+    //fermo(0,0,0);
+    movimento45Destra(0, 140, 140);
   }
 
-  if (angolo == 202.5 || angolo == 90) {
-      movimento45Sinistra(230, 0, 230);
+  if (angolo == 90|| angolo == 202.5 || angolo == 67.5 || angolo == 45 ) {
+    //fermo(0,0,0);
+      movimento45Sinistra(140, 0, 140);
   }
 
-  if (angolo == 247.5 || angolo == 225 || angolo == 180 || angolo == 112.5 || angolo == 135) {
-    movimentoDietro(230, 230, 0);
+  if (angolo == 247.5 || angolo == 225 || angolo == 180 || angolo == 112.5 || angolo == 135 ) {
+    //fermo(0,0,0);
+    movimentoDietro(140, 140, 0);
   }
 
-  if (angolo == 45 || angolo == 67.5) {
-    movimentoDrittoSinistra(120, 120, 220);
+  if (angolo == 22.5) {
+    //fermo(0,0,0);
+    movimentoDrittoSinistra(100, 100, 160);
   }
 
 }
@@ -197,18 +212,18 @@ void setMuxChannel(int channel) {
 }
 
 void movimentoDritto(int pwmA, int pwmB, int pwmC) {
-    Serial.println("movimentoDritto");
+    //Serial.println("movimentoDritto");
     ledcWrite(ena, pwmA);
     ledcWrite(enb, pwmB);
     ledcWrite(enc, pwmC);
    
-    digitalWrite(d, HIGH);
+    digitalWrite(a, HIGH);
     digitalWrite(b, LOW);
     digitalWrite(c, LOW);
 }
 
 void movimentoDrittoDestra(int pwmA, int pwmB, int pwmC) {
-    Serial.println("movimentoDrittoDestra");
+    //Serial.println("movimentoDrittoDestra");
     ledcWrite(ena, pwmA);
     ledcWrite(enb, pwmB);
     ledcWrite(enc, pwmC);
@@ -219,7 +234,7 @@ void movimentoDrittoDestra(int pwmA, int pwmB, int pwmC) {
 }
 
 void movimento45Destra(int pwmA, int pwmB, int pwmC) {
-    Serial.println("movimento45Destra");
+    //Serial.println("movimento45Destra");
     ledcWrite(ena, pwmA);
     ledcWrite(enb, pwmB);
     ledcWrite(enc, pwmC);
@@ -230,7 +245,7 @@ void movimento45Destra(int pwmA, int pwmB, int pwmC) {
 }
 
 void movimento45Sinistra(int pwmA, int pwmB, int pwmC) {
-    Serial.println("movimento45Sinistra");
+    //Serial.println("movimento45Sinistra");
     ledcWrite(ena, pwmA);
     ledcWrite(enb, pwmB);
     ledcWrite(enc, pwmC);
@@ -241,7 +256,7 @@ void movimento45Sinistra(int pwmA, int pwmB, int pwmC) {
 }
 
 void movimentoDietro(int pwmA, int pwmB, int pwmC) {
-    Serial.println("movimentoDietro");
+    //Serial.println("movimentoDietro");
     ledcWrite(ena, pwmA);
     ledcWrite(enb, pwmB);
     ledcWrite(enc, pwmC);
@@ -252,7 +267,18 @@ void movimentoDietro(int pwmA, int pwmB, int pwmC) {
 }
 
 void movimentoDrittoSinistra(int pwmA, int pwmB, int pwmC) {
-    Serial.println("movimentoDrittoSinistra");
+    //Serial.println("movimentoDrittoSinistra");
+    ledcWrite(ena, pwmA);
+    ledcWrite(enb, pwmB);
+    ledcWrite(enc, pwmC);
+   
+    digitalWrite(a, LOW);
+    digitalWrite(b, LOW);
+    digitalWrite(c, HIGH);
+}
+
+void fermo(int pwmA, int pwmB, int pwmC) {
+    //Serial.println("");
     ledcWrite(ena, pwmA);
     ledcWrite(enb, pwmB);
     ledcWrite(enc, pwmC);
@@ -405,16 +431,17 @@ void setup() {
     lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23, &Wire);  
   }
 
-  /*
-  xTaskCreate(
-    readLightSensors,    // Funzione del task
-    "ReadLightSensors",  // Nome del task
-    5000,               // Dimensione dello stack
-    NULL,                // Parametri del task
-    0,                   // Priorità del task
-    NULL                 // Handle del task
+  
+  xTaskCreatePinnedToCore(
+    readLightSensors,     // Funzione del task
+    "ReadLightSensors",   // Nome del task
+    5000,                 // Stack size
+    NULL,                 // Parametri
+    1,                    // Priorità (meglio non usare 0 per task importanti)
+    NULL,                 // Handle
+    0                     // Core su cui eseguire (0 o 1)
   );
-  */
+  
   
 }
 
@@ -423,17 +450,20 @@ void loop() {
 
   for(int channel = 0; channel < 16; channel++){
         setMuxChannel(channel);
-        
-        if (channel < 4) {
-          //triggerParallax();
-          delay(10); 
-          cm[channel] = pulseWidth * 0.034 / 2;
-          //Serial.print("Distance (cm) for channel ");
-          //Serial.print(channel);
-          //Serial.print(": ");
-          //Serial.println(cm[channel]);
-          
+    
+        if(contCicli == 50){
+          if (channel < 4) {
+            //triggerParallax();
+            //delay(10); 
+            //cm[channel] = pulseWidth * 0.034 / 2;
+            //Serial.print("Distance (cm) for channel ");
+            //Serial.print(channel);
+            //Serial.print(": ");
+            //Serial.println(cm[channel]);
+            
+          } 
         }
+        
 
         segnale = analogRead(muxIR);
         
@@ -463,7 +493,7 @@ void loop() {
   //Serial.print("Angolo palla: ");
   //Serial.print(sensore);
   //Serial.print("--");
-  Serial.println(angolo);
+  //Serial.println(angolo);
 
   if(cm[3]){
     //gestioneDribbler(false);
@@ -484,7 +514,18 @@ void loop() {
   
   }
   */ 
+  //delay(10);
   
-  //movimento();
+  if(contCicli == 50){
+    contCicli = 0;
+  }
+  else{
+    contCicli++;
+  }
+  
+  movimento();
+
+    ledcWrite(end, 255);
+    digitalWrite(d, HIGH);
   
 }
