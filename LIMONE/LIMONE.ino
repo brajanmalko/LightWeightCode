@@ -61,7 +61,7 @@ const int resolution = 8;  // Risoluzione a 8 bit (0-255)
 
 float lux[8];
 
-int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, lightValue = 2000, count = 0, contCicli = 0;
+int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, lightValue = 2000, count = 0, contCicli = 0, maxLux, calLux = 280, nLux = 0, mCampo = 50;
 double duration, distancecm;
 float angolo, angleZ;
 bool cattura = false, inverti = false;
@@ -91,7 +91,7 @@ void coreTask(void *pvParameters) {
     tcaselect(0);
     mpu6050.update();
     angleZ = mpu6050.getAngleZ();
-    Serial.println(angleZ);
+    //Serial.println(angleZ);
 
     if (now - lastRead >= SENSOR_INTERVAL) {
       lastRead = now;
@@ -101,10 +101,18 @@ void coreTask(void *pvParameters) {
       }
 
       // Lettura semplificata luce da ogni sensore
-      float lux = lightMeter[count].readLightLevel();
-      if (lux > 80) {
-        inverti = true;
+      lux[count] = lightMeter[count].readLightLevel();
+      //Serial.println(lux[count]);
+      if (lux[count] > maxLux) {
+        maxLux = lux[count];
+        if (lux[count] > calLux) {
+          nLux = count;
+          inverti = true;
+          reazioneLinea(nLux);
+          maxLux = 0;
+        }
       }
+      inverti = false;
       //Serial.print("Luce sensore ");
       //Serial.print(count);
       //Serial.print(": ");
@@ -149,7 +157,6 @@ void movimento() {
     movimentoDritto(vFront, vFront, 0);
   }
 
-
   if (angolo == 337.5) {
     //fermo(0,0,0);
     movimentoDrittoDestra(100, 100, 160);
@@ -177,19 +184,18 @@ void movimento() {
 }
 
 void movimento_gol() {
-  if (angleZ >= -10 && angleZ <= 10) {
+  if (angleZ >= -15 && angleZ <= 15) {
     /*
-        if(cm[2] > 50){
-          movimento45Sinistra(230, 0, 230);
-        }else if(cm[1] > 50){   
-          movimento45Destra(0, 230, 230);
+        if(cm[2] > mCampo){
+          movimento45Sinistra(0, 230, 230);
+        }else if(cm[1] > mCampo){   
+          movimento45Destra(230, 0, 230);
         }
         else{
-          movimentoDritto(230, 230, 0);
-        } 
+          movimentoDritto(200, 200, 0);
+        }
         */
-
-    movimentoDritto(230, 230, 0);
+    movimentoDritto(200, 200, 0);
   }
 }
 
@@ -295,8 +301,17 @@ void movimentoDrittoSinistra(int pwmA, int pwmB, int pwmC) {
   digitalWrite(c, HIGH);
 }
 
-void fermo(int pwmA, int pwmB, int pwmC) {
-  //Serial.println("");
+void movimento45DGol(int pwmA, int pwmB, int pwmC) {
+  ledcWrite(ena, pwmA);
+  ledcWrite(enb, pwmB);
+  ledcWrite(enc, pwmC);
+
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH);
+  digitalWrite(c, LOW);
+}
+
+void movimento45SGol(int pwmA, int pwmB, int pwmC) {
   ledcWrite(ena, pwmA);
   ledcWrite(enb, pwmB);
   ledcWrite(enc, pwmC);
@@ -306,15 +321,12 @@ void fermo(int pwmA, int pwmB, int pwmC) {
   digitalWrite(c, HIGH);
 }
 
-
 void reazioneLinea(int n) {
   switch (n) {
     case 0:
-      gestioneDribbler(true);
       movimentoDietro(230, 230, 0);  // Dietro
       break;
     case 1:
-      gestioneDribbler(true);
       movimentoDietro(230, 230, 0);  // Dietro
       break;
     case 2:
@@ -357,7 +369,6 @@ void reazioneLinea(int n) {
       movimento45Sinistra(230, 0, 230);  // 45° Sinistra
       break;
     case 15:
-      gestioneDribbler(true);
       movimentoDietro(230, 230, 0);  // Dietro
       break;
     default:
@@ -365,38 +376,10 @@ void reazioneLinea(int n) {
   }
 }
 
-void correzioneRotazione() {
-  float errore = angleZ - 0;  // Differenza tra angolo attuale e 0°
-  float Kp = 2.0;             // Costante proporzionale che può essere regolato
-
-  int correzione = Kp * errore;
-
-  // Limita la correzione per evitare oscillazioni e movimenti bruschi
-  correzione = constrain(correzione, -100, 100);
-
-  if (abs(errore) > 3) {
-    analogWrite(ena, abs(correzione));
-    analogWrite(enb, abs(correzione));
-    analogWrite(enc, abs(correzione));
-
-    if (errore > 0) {
-      digitalWrite(a, HIGH);
-      digitalWrite(b, HIGH);
-      digitalWrite(c, HIGH);
-    } else {
-      digitalWrite(a, LOW);
-      digitalWrite(b, LOW);
-      digitalWrite(c, LOW);
-    }
-  }
-}
-
 void correzioneRotazioneC() {
-  float angoloCorretto = fmod(angleZ, 360.0);
-  if (angoloCorretto < -180) angoloCorretto += 360;
-  if (angoloCorretto > 180) angoloCorretto -= 360;
+  int angoloC = fmod(angleZ, 360.0);
 
-  if (angleZ < -10) {
+  if (angleZ < -15) {
     ledcWrite(ena, 0);
     ledcWrite(enb, 0);
     ledcWrite(enc, 160);
@@ -404,7 +387,7 @@ void correzioneRotazioneC() {
     digitalWrite(a, LOW);
     digitalWrite(b, HIGH);
     digitalWrite(c, LOW);
-  } else if (angleZ > 10) {
+  } else if (angleZ > 15) {
     ledcWrite(ena, 0);
     ledcWrite(enb, 0);
     ledcWrite(enc, 160);
@@ -414,21 +397,6 @@ void correzioneRotazioneC() {
     digitalWrite(c, HIGH);
   }
 }
-
-void gestioneDribbler(bool linea) {
-  ledcWrite(end, 255);
-
-  if (linea) {
-    if (cm[0] < 40) {
-      digitalWrite(d, LOW);
-    } else {
-      digitalWrite(d, HIGH);
-    }
-  } else {
-    digitalWrite(d, HIGH);
-  }
-}
-
 
 void setup() {
   Serial.begin(115200);
@@ -460,15 +428,6 @@ void setup() {
 
   attachInterrupt(digitalPinToInterrupt(muxParallax), onRisingEdge, RISING);
 
-  //configurazione del watchdog
-  const esp_task_wdt_config_t wdt_config = {
-    .timeout_ms = 5000,          // Timeout di 5 secondi
-    .idle_core_mask = (1 << 0),  // Core 0
-    .trigger_panic = true,       // Causa panic se non viene resettato
-  };
-  esp_task_wdt_init(&wdt_config);  // Passa il puntatore alla config
-
-
   Wire.begin();
 
   scan(0);
@@ -490,7 +449,13 @@ void setup() {
   scan(7);
   lightMeter[7].begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23, &Wire);
 
-
+  //configurazione del watchdog
+  const esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = 5000,          // Timeout di 5 secondi
+    .idle_core_mask = (1 << 0),  // Core 0
+    .trigger_panic = true,       // Causa panic se non viene resettato
+  };
+  esp_task_wdt_init(&wdt_config);  // Passa il puntatore alla config
 
   // Task principale con più stack
   xTaskCreatePinnedToCore(
@@ -506,18 +471,29 @@ void setup() {
 void loop() {
   //vTaskDelay(pdMS_TO_TICKS(10));
 
+
+
   for (int channel = 0; channel < 16; channel++) {
     setMuxChannel(channel);
 
     if (contCicli == 50) {
       if (channel < 4) {
-        triggerParallax();
-        delay(10);
-        cm[channel] = pulseWidth * 0.034 / 2;
-        Serial.print("Distance (cm) for channel ");
-        Serial.print(channel);
-        Serial.print(": ");
-        Serial.println(cm[channel]);
+        if (cm[3] < 6) {
+          triggerParallax();
+          delay(10);
+          cm[channel] = pulseWidth * 0.034 / 2;
+        } else {
+          if (channel == 3) {
+            triggerParallax();
+            delay(10);
+            cm[channel] = pulseWidth * 0.034 / 2;
+          }
+        }
+
+        //Serial.print("Distance (cm) for channel ");
+        //Serial.print(channel);
+        //Serial.print(": ");
+        //Serial.println(cm[channel]);
       }
     }
 
@@ -548,37 +524,45 @@ void loop() {
   //Serial.print("--");
   //Serial.println(angolo);
 
-  if (cm[3] < 6) {
-    cattura = true;
-    vFront = 200;
+  if (maxLux > calLux) {
+    Serial.println("cazzo sto uscendo");
+    reazioneLinea(nLux);
+    maxLux = 0;
   } else {
-    cattura = false;
-    vFront = 180;
-  }
-
-  //correzioneRotazione();
-
-  if (cattura) {
-    //Serial.println(angoloCorretto);
-    if (angleZ < -10 || angleZ > 10) {
-      correzioneRotazioneC();
+    if (cm[3] < 4) {
+      cattura = true;
+      vFront = 200;
+      Serial.println("catturata");
     } else {
-      movimento_gol();
+      cattura = false;
+      vFront = 180;
     }
-  } else {
-    movimento();
-  }
 
-  if (contCicli == 50) {
-    contCicli = 0;
-  } else {
-    contCicli++;
+    if (cattura) {
+      //Serial.println(angoloCorretto);
+      if (angleZ < -15 || angleZ > 15) {
+        correzioneRotazioneC();
+        Serial.println("correggo rotazione");
+      } else {
+        movimento_gol();
+        Serial.println("faccio gol");
+      }
+    } else {
+      movimento();
+    }
+
+    if (contCicli == 50) {
+      contCicli = 0;
+    } else {
+      contCicli++;
+    }
   }
 
   if (!inverti) {
     ledcWrite(end, 255);
     digitalWrite(d, HIGH);
   } else {
+    Serial.println("tiroooo");
     ledcWrite(end, 255);
     digitalWrite(d, LOW);
   }
