@@ -9,12 +9,13 @@
 
 #define TCAADDR 0x70
 
+#define mCampo 50; //misura della metà del campo in cm
+#define calLux = 280; // valore sopra il quale far reagire il robot
+
 MPU6050 mpu6050(Wire);
 BH1750 lightMeter[8];
 
-unsigned long task1_millis;
 unsigned long acquire_millis;
-unsigned long change_i2cport_millis;
 
 const unsigned long SENSOR_INTERVAL = 15;
 
@@ -55,19 +56,24 @@ int muxLight = 23;
 int segnali[16];
 int medi[16];
 
+//ARRAY FOR LUX SENSORS
+float lux[8];
+
 //CONFIGURATION OF PWM FOR ESP32
 const int freq = 2000;     // Frequenza PWM in Hz
 const int resolution = 8;  // Risoluzione a 8 bit (0-255)
 
-float lux[8];
-
-int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, lightValue = 2000, count = 0, contCicli = 0, maxLux, calLux = 280, nLux = 0, mCampo = 50;
+//GENERAL VARIABLES
+int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, count = 0, contCicli = 0, maxLux;
 double duration, distancecm;
 float angolo, angleZ;
-bool cattura = false, inverti = false;
+bool cattura = false;
 
-int vFront = 180;
+//VARIABLES USED BY TASKS
+volatile bool inverti = false;
+volatile int nLux = 0;
 
+//VARIABLES FOR PARALLAX READING
 volatile unsigned long riseTime = 0;
 volatile unsigned long pulseWidth = 0;
 
@@ -108,8 +114,8 @@ void coreTask(void *pvParameters) {
         if (lux[count] > calLux) {
           nLux = count;
           inverti = true;
-          reazioneLinea(nLux);
-          maxLux = 0;
+          //reazioneLinea(nLux);
+          //maxLux = 0;
         }
       }
       inverti = false;
@@ -478,7 +484,7 @@ void loop() {
 
     if (contCicli == 50) {
       if (channel < 4) {
-        if (cm[3] < 6) {
+        if (cm[3] < 5) {
           triggerParallax();
           delay(10);
           cm[channel] = pulseWidth * 0.034 / 2;
