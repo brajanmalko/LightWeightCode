@@ -9,15 +9,12 @@
 
 #define TCAADDR 0x70
 
-#define mCampo 50; //misura della metà del campo in cm
-#define calLux = 280; // valore sopra il quale far reagire il robot
-
 MPU6050 mpu6050(Wire);
 BH1750 lightMeter[8];
 
 unsigned long acquire_millis;
 
-const unsigned long SENSOR_INTERVAL = 15;
+const unsigned long SENSOR_INTERVAL = 0.5;
 
 static unsigned long lastParallaxTrigger = 0;
 static int parallaxPhase = 0;
@@ -64,7 +61,7 @@ const int freq = 2000;     // Frequenza PWM in Hz
 const int resolution = 8;  // Risoluzione a 8 bit (0-255)
 
 //GENERAL VARIABLES
-int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, count = 0, contCicli = 0, maxLux;
+int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, count = 0, contCicli = 0, maxLux, vFront = 200, mCampo = 50, calLux = 10;
 double duration, distancecm;
 float angolo, angleZ;
 bool cattura = false;
@@ -102,28 +99,31 @@ void coreTask(void *pvParameters) {
     if (now - lastRead >= SENSOR_INTERVAL) {
       lastRead = now;
 
-      tcaselect(count);
-      if (count == 0) {
+      if(count == 8){
+        count = 0;
       }
 
+      tcaselect(count);
       // Lettura semplificata luce da ogni sensore
       lux[count] = lightMeter[count].readLightLevel();
-      //Serial.println(lux[count]);
+      Serial.println(lux[7]);
       if (lux[count] > maxLux) {
         maxLux = lux[count];
         if (lux[count] > calLux) {
           nLux = count;
-          inverti = true;
-          //reazioneLinea(nLux);
+          if(count == 4 || count == 5 || count == 6){
+            inverti = true;
+          }
+          
+          reazioneLinea(nLux);
           //maxLux = 0;
         }
       }
-      inverti = false;
       //Serial.print("Luce sensore ");
       //Serial.print(count);
       //Serial.print(": ");
       //Serial.println(lux);
-      count = (count + 1) % 8;
+      count++;
     }
 
     vTaskDelay(1);
@@ -330,52 +330,36 @@ void movimento45SGol(int pwmA, int pwmB, int pwmC) {
 void reazioneLinea(int n) {
   switch (n) {
     case 0:
-      movimentoDietro(230, 230, 0);  // Dietro
+      movimentoDritto(160, 160, 0);  // Dietro
+      delay(30);
       break;
     case 1:
-      movimentoDietro(230, 230, 0);  // Dietro
+      movimentoDritto(160, 160, 0);  // Dietro
+      delay(30);
       break;
     case 2:
-      movimento45Destra(0, 230, 230);  // 45° Destra
+      movimentoDrittoSinistra(100, 100, 160);  // Dritto Sinistra      
+      delay(30);
       break;
     case 3:
-      movimentoDrittoDestra(120, 120, 220);  // Dritto Destra
+      movimentoDietro(160, 160, 0);  // Dietro
+      delay(30);
       break;
     case 4:
-      movimentoDrittoDestra(120, 120, 220);  // Dritto Destra
+      movimentoDietro(160, 160, 0);  // Dietro
+      delay(30);
       break;
     case 5:
-      movimentoDrittoDestra(120, 120, 220);  // Dritto Destra
+      movimentoDietro(160, 160, 0);  // Dietro
+      delay(30);
       break;
     case 6:
-      movimentoDrittoDestra(120, 120, 220);  // Dritto Destra
+      movimentoDrittoDestra(100, 100, 160);  // Dritto Destra
+      delay(30);
       break;
     case 7:
-      movimentoDritto(230, 230, 0);  // Dritto
-      break;
-    case 8:
-      movimentoDritto(230, 230, 0);  // Dritto
-      break;
-    case 9:
-      movimentoDritto(230, 230, 0);  // Dritto
-      break;
-    case 10:
-      movimentoDrittoSinistra(120, 120, 220);  // Dritto Sinistra
-      break;
-    case 11:
-      movimentoDrittoSinistra(120, 120, 220);  // Dritto Sinistra
-      break;
-    case 12:
-      movimentoDrittoSinistra(120, 120, 220);  // Dritto Sinistra
-      break;
-    case 13:
-      // Dritto Sinistra
-      break;
-    case 14:
-      movimento45Sinistra(230, 0, 230);  // 45° Sinistra
-      break;
-    case 15:
-      movimentoDietro(230, 230, 0);  // Dietro
+      movimentoDritto(160, 160, 0);  // Dritto
+      delay(30);
       break;
     default:
       break;
@@ -434,6 +418,17 @@ void setup() {
 
   attachInterrupt(digitalPinToInterrupt(muxParallax), onRisingEdge, RISING);
 
+  
+
+  //configurazione del watchdog
+  const esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = 5000,          // Timeout di 5 secondi
+    .idle_core_mask = (1 << 0),  // Core 0
+    .trigger_panic = true,       // Causa panic se non viene resettato
+  };
+  esp_task_wdt_init(&wdt_config);  // Passa il puntatore alla config
+
+
   Wire.begin();
 
   scan(0);
@@ -455,14 +450,6 @@ void setup() {
   scan(7);
   lightMeter[7].begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23, &Wire);
 
-  //configurazione del watchdog
-  const esp_task_wdt_config_t wdt_config = {
-    .timeout_ms = 5000,          // Timeout di 5 secondi
-    .idle_core_mask = (1 << 0),  // Core 0
-    .trigger_panic = true,       // Causa panic se non viene resettato
-  };
-  esp_task_wdt_init(&wdt_config);  // Passa il puntatore alla config
-
   // Task principale con più stack
   xTaskCreatePinnedToCore(
     coreTask,
@@ -477,22 +464,22 @@ void setup() {
 void loop() {
   //vTaskDelay(pdMS_TO_TICKS(10));
 
-
-
   for (int channel = 0; channel < 16; channel++) {
     setMuxChannel(channel);
 
     if (contCicli == 50) {
       if (channel < 4) {
-        if (cm[3] < 5) {
+        if (cm[3] < 4) {
           triggerParallax();
           delay(10);
           cm[channel] = pulseWidth * 0.034 / 2;
+          //Serial.println(cm[3]);
         } else {
           if (channel == 3) {
             triggerParallax();
             delay(10);
             cm[channel] = pulseWidth * 0.034 / 2;
+            //Serial.println(cm[3]);
           }
         }
 
@@ -571,6 +558,9 @@ void loop() {
     Serial.println("tiroooo");
     ledcWrite(end, 255);
     digitalWrite(d, LOW);
+    delay(300);
+
+    inverti = false;
   }
 }
 
