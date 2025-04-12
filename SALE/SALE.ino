@@ -61,7 +61,7 @@ const int freq = 2000;     // Frequenza PWM in Hz
 const int resolution = 8;  // Risoluzione a 8 bit (0-255)
 
 //GENERAL VARIABLES
-int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, count = 0, contCicli = 0, maxLux, vFront = 200, mCampo = 50, calLux = 10;
+int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, count = 0, contCicli = 0, maxLux, vFront = 150, mCampo = 50, calLux = 11;
 double duration, distancecm;
 float angolo, angleZ;
 bool cattura = false;
@@ -170,17 +170,17 @@ void movimento() {
 
   if (angolo == 292.5 || angolo == 270 || angolo == 157.5 || angolo == 315) {
     //fermo(0,0,0);
-    movimento45Destra(0, 140, 140);
+    movimento45Destra(0, 120, 120);
   }
 
   if (angolo == 90 || angolo == 202.5 || angolo == 67.5 || angolo == 45) {
     //fermo(0,0,0);
-    movimento45Sinistra(140, 0, 140);
+    movimento45Sinistra(120, 0, 120);
   }
 
   if (angolo == 247.5 || angolo == 225 || angolo == 180 || angolo == 112.5 || angolo == 135) {
     //fermo(0,0,0);
-    movimentoDietro(140, 140, 0);
+    movimentoDietro(120, 120, 0);
   }
 
   if (angolo == 22.5) {
@@ -205,19 +205,19 @@ void movimento_gol() {
   }
 }
 
-void movimentoPortire(){
+void movimentoPortiere(){
   if (angleZ >= -15 && angleZ <= 15) {
     if(cm[0] < 50){
       if(cm[1] > mCampo){
-        movimento45DGol(180, 0, 180);
+        movimento45DGol(160, 0, 160);
       }
       else if(cm[2]){
-        movimento45SGol(0, 180, 180);
+        movimento45SGol(0, 160, 160);
       }
       
     }
     else{
-      movimentoDritto(220, 220, 0);
+      movimentoDritto(180, 180, 0);
     }
   }
 }
@@ -355,7 +355,7 @@ void reazioneLinea(int n) {
       delay(30);
       break;
     case 2:
-      movimentoDrittoSinistra(100, 100, 160);  // Dritto Sinistra      
+      movimentoDrittoDestra(100, 100, 160);  // Dritto Sinistra      
       delay(30);
       break;
     case 3:
@@ -371,7 +371,7 @@ void reazioneLinea(int n) {
       delay(30);
       break;
     case 6:
-      movimentoDrittoDestra(100, 100, 160);  // Dritto Destra
+      movimentoDrittoSinistra(100, 100, 160);  // Dritto Destra
       delay(30);
       break;
     case 7:

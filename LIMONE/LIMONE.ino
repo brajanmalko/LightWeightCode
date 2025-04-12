@@ -61,7 +61,7 @@ const int freq = 2000;     // Frequenza PWM in Hz
 const int resolution = 8;  // Risoluzione a 8 bit (0-255)
 
 //GENERAL VARIABLES
-int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, count = 0, contCicli = 0, maxLux, vFront = 200, mCampo = 50, calLux = 10;
+int minimo, sensore, valore, segnale, duty, on, off, periodo, v_rotazione, v_dritto, count = 0, contCicli = 0, maxLux, vFront = 130, mCampo = 50, calLux = 11;
 double duration, distancecm;
 float angolo, angleZ;
 bool cattura = false;
@@ -88,13 +88,13 @@ void coreTask(void *pvParameters) {
   esp_task_wdt_add(NULL);
 
   while (1) {
-    uint32_t now = millis();
+    uint32_t now = millis(); 
     static uint32_t lastRead = 0;
 
     tcaselect(0);
     mpu6050.update();
     angleZ = mpu6050.getAngleZ();
-    //Serial.println(angleZ);
+    Serial.println(angleZ);
 
     if (now - lastRead >= SENSOR_INTERVAL) {
       lastRead = now;
@@ -106,7 +106,7 @@ void coreTask(void *pvParameters) {
       tcaselect(count);
       // Lettura semplificata luce da ogni sensore
       lux[count] = lightMeter[count].readLightLevel();
-      Serial.println(lux[7]);
+      //Serial.println(lux[7]);
       if (lux[count] > maxLux) {
         maxLux = lux[count];
         if (lux[count] > calLux) {
@@ -165,27 +165,27 @@ void movimento() {
 
   if (angolo == 337.5) {
     //fermo(0,0,0);
-    movimentoDrittoDestra(100, 100, 160);
+    movimentoDrittoDestra(80, 80, 140);
   }
 
   if (angolo == 292.5 || angolo == 270 || angolo == 157.5 || angolo == 315) {
     //fermo(0,0,0);
-    movimento45Destra(0, 140, 140);
+    movimento45Destra(0, 120, 120);
   }
 
   if (angolo == 90 || angolo == 202.5 || angolo == 67.5 || angolo == 45) {
     //fermo(0,0,0);
-    movimento45Sinistra(140, 0, 140);
+    movimento45Sinistra(120, 0, 120);
   }
 
   if (angolo == 247.5 || angolo == 225 || angolo == 180 || angolo == 112.5 || angolo == 135) {
     //fermo(0,0,0);
-    movimentoDietro(140, 140, 0);
+    movimentoDietro(120, 120, 0);
   }
 
   if (angolo == 22.5) {
     //fermo(0,0,0);
-    movimentoDrittoSinistra(100, 100, 160);
+    movimentoDrittoSinistra(80, 80, 140);
   }
 }
 
@@ -330,36 +330,36 @@ void movimento45SGol(int pwmA, int pwmB, int pwmC) {
 void reazioneLinea(int n) {
   switch (n) {
     case 0:
-      movimentoDritto(160, 160, 0);  // Dietro
-      delay(30);
+      movimentoDritto(200, 200, 0);  // Dietro
+      delay(40);
       break;
     case 1:
-      movimentoDritto(160, 160, 0);  // Dietro
-      delay(30);
+      movimentoDritto(200, 200, 0);  // Dietro
+      delay(40);
       break;
     case 2:
-      movimentoDrittoSinistra(100, 100, 160);  // Dritto Sinistra      
-      delay(30);
+      movimentoDrittoDestra(100, 100, 160);  // Dritto Sinistra      
+      delay(40);
       break;
     case 3:
-      movimentoDietro(160, 160, 0);  // Dietro
-      delay(30);
+      movimentoDietro(200, 200, 0);  // Dietro
+      delay(40);
       break;
     case 4:
-      movimentoDietro(160, 160, 0);  // Dietro
-      delay(30);
+      movimentoDietro(200, 200, 0);  // Dietro
+      delay(40);
       break;
     case 5:
-      movimentoDietro(160, 160, 0);  // Dietro
-      delay(30);
+      movimentoDietro(200, 200, 0);  // Dietro
+      delay(40);
       break;
     case 6:
-      movimentoDrittoDestra(100, 100, 160);  // Dritto Destra
-      delay(30);
+      movimentoDrittoSinistra(100, 100, 160);  // Dritto Destra
+      delay(40);
       break;
     case 7:
-      movimentoDritto(160, 160, 0);  // Dritto
-      delay(30);
+      movimentoDritto(200, 200, 0);  // Dritto
+      delay(40);
       break;
     default:
       break;
@@ -524,11 +524,11 @@ void loop() {
   } else {
     if (cm[3] < 4) {
       cattura = true;
-      vFront = 200;
+      vFront = 170;
       Serial.println("catturata");
     } else {
       cattura = false;
-      vFront = 180;
+      vFront = 130;
     }
 
     if (cattura) {
